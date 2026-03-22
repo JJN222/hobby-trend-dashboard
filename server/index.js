@@ -71,17 +71,19 @@ function runCollection() {
   console.log(`[${new Date().toISOString()}] Collection complete.`);
 }
 
+// Serve frontend in production
+if (process.env.NODE_ENV === "production") {
+  const frontendPath = path.join(__dirname, "..", "client", "dist");
+  app.use(express.static(frontendPath));
+  app.get("*", (req, res) => {
+    if (!req.path.startsWith("/api")) {
+      res.sendFile(path.join(frontendPath, "index.html"));
+    }
+  });
+}
+
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
   console.log(`Daily collection: 5:00 AM PT | Monthly briefs: 1st at 8:00 AM PT`);
 });
 
-// Serve frontend in production
-const serveStatic = require("path");
-if (process.env.NODE_ENV === "production") {
-  const frontendPath = serveStatic.join(__dirname, "..", "client", "dist");
-  app.use(require("express").static(frontendPath));
-  app.get("*", (req, res) => {
-    res.sendFile(serveStatic.join(frontendPath, "index.html"));
-  });
-}
