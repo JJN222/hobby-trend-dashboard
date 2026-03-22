@@ -1,0 +1,30 @@
+{
+  "name": "hobby-trend-dashboard",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:server": "cd server && npm run dev",
+    "dev:client": "cd client && npm run dev",
+    "install:all": "npm install && cd server && npm install && cd ../client && npm install",
+    "collect": "cd server && node scripts/collect-all.js",
+    "collect:youtube": "cd server && node scripts/collect-youtube.js",
+    "collect:tiktok": "cd server && node scripts/collect-tiktok.js",
+    "collect:trends": "cd server && node scripts/collect-trends.js",
+    "score": "cd server && node scripts/calculate-scores.js",
+    "db:init": "cd server && node db/init.js",
+    "collect:volume": "cd server && node scripts/collect-volume.js",
+    "collect:all": "cd server && node scripts/collect-all.js",
+    "briefs": "cd server && node scripts/generate-briefs.js",
+    "build": "cd client && npm install && npm run build",
+    "start": "cd server && node index.js"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "dependencies": {
+    "dotenv": "^17.3.1"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
