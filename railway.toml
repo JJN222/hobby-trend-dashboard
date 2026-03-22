@@ -3,5 +3,4 @@ buildCommand = "npm install && cd server && npm install && cd ../client && npm i
 
 [deploy]
 startCommand = "NODE_ENV=production node server/index.js"
-healthcheckPath = "/api/health"
 restartPolicyType = "ON_FAILURE"
