@@ -24,6 +24,17 @@ export default function HobbyTable({ hobbies, onSelect }) {
   const [sortCol, setSortCol] = useState("trendScore");
   const [sortDir, setSortDir] = useState("desc");
 
+  // Calculate search interest growth from sparkline (last 4 weeks vs prior 4 weeks)
+  const calcSearchGrowth = (sparkline) => {
+    if (!sparkline || !Array.isArray(sparkline) || sparkline.length < 8) return null;
+    const recent = sparkline.slice(-4);
+    const prior = sparkline.slice(-8, -4);
+    const avgRecent = recent.reduce((a, b) => a + b, 0) / recent.length;
+    const avgPrior = prior.reduce((a, b) => a + b, 0) / prior.length;
+    if (avgPrior === 0) return null;
+    return ((avgRecent - avgPrior) / avgPrior) * 100;
+  };
+
   const fmtViews = (v) => {
     if (!v || v === "0") return "--";
     const n = Number(v);
@@ -104,7 +115,7 @@ export default function HobbyTable({ hobbies, onSelect }) {
         case "ttViews": valA = Number(a.tt_total_views) || 0; valB = Number(b.tt_total_views) || 0; break;
         case "ttHashtag": valA = Number(a.tt_hashtag_views) || 0; valB = Number(b.tt_hashtag_views) || 0; break;
         case "volume": valA = Number(a.search_volume) || 0; valB = Number(b.search_volume) || 0; break;
-        case "momentum": valA = Number(a.trends_interest_score) || 0; valB = Number(b.trends_interest_score) || 0; break;
+        case "searchGrowth": valA = calcSearchGrowth(a.trends_sparkline) ?? -999; valB = calcSearchGrowth(b.trends_sparkline) ?? -999; break;
         default: valA = a.trend_score || 0; valB = b.trend_score || 0;
       }
       return sortDir === "asc" ? valA - valB : valB - valA;
@@ -124,7 +135,7 @@ export default function HobbyTable({ hobbies, onSelect }) {
     { key: "ttViews", label: "TT Top Videos" },
     { key: "ttHashtag", label: "TT Hashtag" },
     { key: "volume", label: "Search Vol", tooltip: "Monthly Google searches -- comparable across hobbies" },
-    { key: "momentum", label: "Momentum", tooltip: "Google Trends 0-100 -- relative to each hobby's own peak, NOT comparable across hobbies" },
+    { key: "searchGrowth", label: "Search Growth", tooltip: "Google search interest change -- last 4 weeks vs prior 4 weeks" },
     { key: null, label: "Trend" },
   ];
 
@@ -246,8 +257,16 @@ export default function HobbyTable({ hobbies, onSelect }) {
                   )}
                 </td>
                 <td style={{ padding: "14px 8px" }}>
-                  <span style={{ fontSize: 15, fontWeight: 500, color: "#1a1a1a" }}>{hobby.trends_interest_score ?? "--"}</span>
-                  <span style={{ fontSize: 10, color: "#888", marginLeft: 2, fontWeight: 300 }}>/100</span>
+                  {(() => {
+                    const growth = calcSearchGrowth(hobby.trends_sparkline);
+                    if (growth == null) return <span style={{ fontSize: 15, color: "#bbb" }}>--</span>;
+                    const color = growth > 5 ? "#2d6a4f" : growth < -5 ? "#c0392b" : "#888";
+                    return (
+                      <span style={{ fontSize: 15, fontWeight: 500, color }}>
+                        {growth >= 0 ? "+" : ""}{growth.toFixed(0)}%
+                      </span>
+                    );
+                  })()}
                 </td>
                 <td style={{ padding: "14px 8px" }}>
                   {hasRealData ? (
