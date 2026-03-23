@@ -2,6 +2,7 @@
  * Collect monthly search volume for each hobby's primary keyword.
  * Uses DataForSEO Google Ads Search Volume endpoint.
  * This gives REAL comparable monthly search numbers across hobbies.
+const HOBBY_ID = process.argv.find(a => a.startsWith("--hobby-id="))?.split("=")[1];
  *
  * Run: node scripts/collect-volume.js
  * Cost: ~$0.05 per hobby (batched), ~$3 per full run
@@ -39,7 +40,7 @@ async function main() {
   console.log("Collecting search volume data...\n");
 
   const { rows: hobbies } = await pool.query(
-    `SELECT id, name, keywords FROM hobbies WHERE active = true`
+    HOBBY_ID ? `SELECT id, name, keywords FROM hobbies WHERE active = true AND id = ${parseInt(HOBBY_ID)}` : `SELECT id, name, keywords FROM hobbies WHERE active = true`
   );
 
   const today = new Date().toISOString().split("T")[0];

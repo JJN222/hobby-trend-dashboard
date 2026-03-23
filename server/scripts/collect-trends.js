@@ -1,10 +1,11 @@
 /**
  * DataForSEO Google Trends collection script
  *
- * Stores both the latest interest score AND an 8-week daily sparkline.
+ * Collects search interest data for each hobby's keywords.
+ * Uses the DataForSEO Trends API (~$0.001 per request).
  *
  * Run: node scripts/collect-trends.js
- * Cost: ~$0.009 per hobby, ~$0.42 per run
+ * Single hobby: node scripts/collect-trends.js --hobby-id=123
  */
 
 const pool = require("../db/pool");
@@ -12,14 +13,15 @@ require("dotenv").config();
 
 const LOGIN = process.env.DATAFORSEO_LOGIN;
 const PASSWORD = process.env.DATAFORSEO_PASSWORD;
-const AUTH = "Basic " + Buffer.from(LOGIN + ":" + PASSWORD).toString("base64");
+const BASE = "https://api.dataforseo.com/v3";
+const HOBBY_ID = process.argv.find(a => a.startsWith("--hobby-id="))?.split("=")[1];
 
 async function dfsPost(endpoint, body) {
-  const res = await fetch("https://api.dataforseo.com/v3" + endpoint, {
+  const res = await fetch(`${BASE}${endpoint}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: AUTH,
+      Authorization: "Basic " + Buffer.from(`${LOGIN}:${PASSWORD}`).toString("base64"),
     },
     body: JSON.stringify(body),
   });
@@ -31,89 +33,84 @@ async function dfsPost(endpoint, body) {
   return res.json();
 }
 
-function formatDate(date) {
-  return date.toISOString().split("T")[0];
+async function getTrendsData(keywords) {
+  // Use DataForSEO's Google Trends explore endpoint
+  const data = await dfsPost("/keywords_data/google_trends/explore/live", [
+    {
+      keywords,
+      location_code: 2840, // United States
+      language_code: "en",
+      type: "web",
+      time_range: "past_3_months",
+    },
+  ]);
+
+  return data?.tasks?.[0]?.result || [];
 }
 
 async function collectForHobby(hobby) {
   console.log(`  Collecting trends data for: ${hobby.name}`);
 
+  // Use first keyword as primary
   const keyword = hobby.keywords[0];
   if (!keyword) return;
 
   try {
-    const data = await dfsPost("/keywords_data/google_trends/explore/live", [
-      {
-        keywords: [keyword],
-        location_code: 2840,
-        language_code: "en",
-        type: "web",
-        time_range: "past_12_months",
-      },
-    ]);
+    const results = await getTrendsData([keyword]);
 
-    const task = data?.tasks?.[0];
-    if (task?.status_code !== 20000) {
-      console.error(`    API error: ${task?.status_code} ${task?.status_message}`);
-      return;
-    }
-
-    const result = task?.result?.[0];
-    if (!result || !result.items) {
-      console.log(`    No results returned`);
-      return;
-    }
-
-    const graph = result.items.find((item) => item.type === "google_trends_graph");
-    if (!graph || !graph.data || graph.data.length === 0) {
-      console.log(`    No graph data`);
-      return;
-    }
-
-    // Get valid data points
-    const validPoints = graph.data.filter((d) => !d.missing_data && d.values && d.values.length > 0);
-    const latestPoint = validPoints[validPoints.length - 1];
-    const interestScore = latestPoint?.values?.[0] || 0;
-
-    // Build sparkline: last 56 days (8 weeks) of daily values
-    const sparklineValues = validPoints.slice(-56).map((d) => d.values[0]);
-
-    // Calculate 7-day acceleration
-    const recentPoints = validPoints.slice(-7);
-    const priorPoints = validPoints.slice(-14, -7);
-    const recentAvg = recentPoints.length > 0
-      ? recentPoints.reduce((a, d) => a + (d.values?.[0] || 0), 0) / recentPoints.length
-      : 0;
-    const priorAvg = priorPoints.length > 0
-      ? priorPoints.reduce((a, d) => a + (d.values?.[0] || 0), 0) / priorPoints.length
-      : 0;
-
-    // Related queries
+    // Extract the latest interest score (0-100)
+    let interestScore = 0;
     let relatedQueries = [];
-    const relatedItem = result.items.find(
-      (item) => item.type === "google_trends_queries_list" && item.title === "Related queries"
-    );
-    if (relatedItem && relatedItem.data) {
-      relatedQueries = relatedItem.data
-        .slice(0, 5)
-        .map((d) => d.query || d.keyword)
-        .filter(Boolean);
+
+    if (results.length > 0) {
+      const items = results[0]?.items || [];
+      // Get the most recent data point
+      if (items.length > 0 && items[0]?.data) {
+        const dataPoints = items[0].data;
+        // Interest score from the latest period
+        if (Array.isArray(dataPoints)) {
+          const latest = dataPoints[dataPoints.length - 1];
+          interestScore = latest?.values?.[0] || 0;
+        }
+      }
     }
 
-    // Upsert today's snapshot
+    // Also fetch related queries for discovery
+    try {
+      const relatedData = await dfsPost("/keywords_data/google_trends/explore/live", [
+        {
+          keywords: [keyword],
+          location_code: 2840,
+          language_code: "en",
+          type: "web",
+          category: 0,
+          time_range: "past_12_months",
+          item_types: ["related_queries"],
+        },
+      ]);
+
+      const relatedItems = relatedData?.tasks?.[0]?.result?.[0]?.items || [];
+      relatedQueries = relatedItems
+        .filter((item) => item.type === "related_queries")
+        .flatMap((item) => (item.data || []).slice(0, 5).map((d) => d.query))
+        .filter(Boolean);
+    } catch (err) {
+      // Related queries is optional, don't fail
+      console.log(`    Related queries lookup skipped: ${err.message}`);
+    }
+
+    // Upsert today's snapshot (trends columns)
     const today = new Date().toISOString().split("T")[0];
     await pool.query(
-      `INSERT INTO hobby_snapshots (hobby_id, snapshot_date, trends_interest_score, trends_related_queries, trends_sparkline)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO hobby_snapshots (hobby_id, snapshot_date, trends_interest_score, trends_related_queries)
+       VALUES ($1, $2, $3, $4)
        ON CONFLICT (hobby_id, snapshot_date) DO UPDATE SET
          trends_interest_score = EXCLUDED.trends_interest_score,
-         trends_related_queries = EXCLUDED.trends_related_queries,
-         trends_sparkline = EXCLUDED.trends_sparkline`,
-      [hobby.id, today, interestScore, JSON.stringify(relatedQueries), JSON.stringify(sparklineValues)]
+         trends_related_queries = EXCLUDED.trends_related_queries`,
+      [hobby.id, today, interestScore, JSON.stringify(relatedQueries)]
     );
 
-    const accel = priorAvg > 0 ? (((recentAvg - priorAvg) / priorAvg) * 100).toFixed(1) : "N/A";
-    console.log(`    Interest: ${interestScore}/100, sparkline: ${sparklineValues.length} pts, accel: ${accel}%`);
+    console.log(`    Interest: ${interestScore}/100, Related: ${relatedQueries.join(", ") || "none"}`);
   } catch (err) {
     console.error(`    Trends fetch failed:`, err.message);
   }
@@ -126,18 +123,17 @@ async function main() {
   }
 
   console.log("Starting Google Trends data collection...");
-  const { rows: hobbies } = await pool.query(
-    `SELECT id, name, keywords FROM hobbies WHERE active = true`
-  );
-
-  console.log(`Collecting for ${hobbies.length} hobbies (~$${(hobbies.length * 0.009).toFixed(2)} estimated cost)\n`);
+  const query = HOBBY_ID
+    ? `SELECT id, name, keywords FROM hobbies WHERE active = true AND id = ${parseInt(HOBBY_ID)}`
+    : `SELECT id, name, keywords FROM hobbies WHERE active = true`;
+  const { rows: hobbies } = await pool.query(query);
 
   for (const hobby of hobbies) {
     await collectForHobby(hobby);
-    await new Promise((r) => setTimeout(r, 300));
+    await new Promise((r) => setTimeout(r, 500));
   }
 
-  console.log("\nTrends collection complete.");
+  console.log("Trends collection complete.");
   process.exit(0);
 }
 
