@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const pool = require("../db/pool");
 
-// GET /api/hobbies - All hobbies with latest snapshot data
+// GET /api/hobbies - All hobbies with latest snapshot + video totals
 router.get("/", async (req, res) => {
   try {
     const { category } = req.query;
@@ -14,10 +14,14 @@ router.get("/", async (req, res) => {
         s.yt_search_results, s.yt_avg_views, s.yt_new_videos_24h, s.yt_unique_channels,
         s.tt_hashtag_views, s.tt_avg_plays, s.tt_avg_engagement_rate,
         s.tt_new_videos_24h, s.tt_unique_creators,
-        s.trends_interest_score,
+        s.trends_interest_score, s.trends_sparkline, s.search_volume,
         s.trend_score, s.yt_growth_rate, s.tt_growth_rate,
         s.search_acceleration, s.creator_adoption_rate, s.direction,
-        p.prediction_text, p.signals, p.confidence
+        p.prediction_text, p.signals, p.confidence,
+        yt_totals.total_views as yt_total_views,
+        yt_totals.video_count as yt_video_count,
+        tt_totals.total_views as tt_total_views,
+        tt_totals.video_count as tt_video_count
       FROM hobbies h
       LEFT JOIN LATERAL (
         SELECT * FROM hobby_snapshots
@@ -31,6 +35,23 @@ router.get("/", async (req, res) => {
         ORDER BY prediction_date DESC
         LIMIT 1
       ) p ON true
+      LEFT JOIN LATERAL (
+        SELECT
+          COALESCE(SUM(views), 0) as total_views,
+          COUNT(*) as video_count
+        FROM videos
+        WHERE hobby_id = h.id
+          AND platform = 'youtube'
+          AND published_at >= NOW() - INTERVAL '30 days'
+      ) yt_totals ON true
+      LEFT JOIN LATERAL (
+        SELECT
+          COALESCE(SUM(views), 0) as total_views,
+          COUNT(*) as video_count
+        FROM videos
+        WHERE hobby_id = h.id
+          AND platform = 'tiktok'
+      ) tt_totals ON true
       WHERE h.active = true
     `;
 
@@ -50,7 +71,7 @@ router.get("/", async (req, res) => {
   }
 });
 
-// GET /api/hobbies/categories - Distinct categories
+// GET /api/hobbies/categories
 router.get("/categories", async (req, res) => {
   try {
     const result = await pool.query(
@@ -62,7 +83,7 @@ router.get("/categories", async (req, res) => {
   }
 });
 
-// POST /api/hobbies - Add a new hobby to track
+// POST /api/hobbies
 router.post("/", async (req, res) => {
   try {
     const { name, category, keywords, tiktok_hashtags } = req.body;
