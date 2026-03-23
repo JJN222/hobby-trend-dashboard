@@ -69,7 +69,7 @@ export default function DetailPanel({ hobby, onClose, onRefresh, categories }) {
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
-          background: "#faf9f7", width: "100%", maxWidth: 640,
+          background: "#faf9f7", width: "100%", maxWidth: 640, overflow: "hidden",
           padding: "40px 44px", marginBottom: 40,
           boxShadow: "0 4px 40px rgba(0,0,0,0.06)",
         }}

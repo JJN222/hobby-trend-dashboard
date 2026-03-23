@@ -146,7 +146,7 @@ export function VideoCardRow({ video }) {
           TT
         </div>
       )}
-      <div style={{ minWidth: 0 }}>
+      <div style={{ minWidth: 0, overflow: "hidden" }}>
         <div
           style={{
             fontSize: 12,
