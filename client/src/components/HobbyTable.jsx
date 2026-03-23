@@ -135,7 +135,7 @@ export default function HobbyTable({ hobbies, onSelect }) {
     { key: "ttViews", label: "TT Top Videos" },
     { key: "ttHashtag", label: "TT Hashtag" },
     { key: "volume", label: "Search Vol", tooltip: "Monthly Google searches -- comparable across hobbies" },
-    { key: "searchGrowth", label: "Search Growth", tooltip: "Google search interest change -- this month vs same month last year (YoY)" },
+    { key: "searchGrowth", label: "YoY Growth", tooltip: "Google search interest change -- this month vs same month last year" },
     { key: null, label: "Trend" },
   ];
 
