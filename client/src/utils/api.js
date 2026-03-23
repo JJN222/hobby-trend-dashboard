@@ -67,3 +67,21 @@ export async function fetchBrief(hobbyId) {
   if (!res.ok) return null;
   return res.json();
 }
+
+export async function fetchOverviewBrief() {
+  const res = await fetch(`${BASE}/briefs/overview`);
+  if (!res.ok) return null;
+  return res.json();
+}
+
+export async function fetchHobbyBrief(hobbyId) {
+  const res = await fetch(`${BASE}/briefs/hobby/${hobbyId}`);
+  if (!res.ok) return null;
+  return res.json();
+}
+
+export async function generateHobbyBrief(hobbyId) {
+  const res = await fetch(`${BASE}/briefs/hobby/${hobbyId}/generate`, { method: "POST" });
+  if (!res.ok) throw new Error("Failed to generate brief");
+  return res.json();
+}
