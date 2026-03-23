@@ -4,7 +4,68 @@ import VideoGrid from "./components/VideoGrid";
 import DetailPanel from "./components/DetailPanel";
 import InsightsView from "./components/InsightsView";
 import { useApi } from "./hooks/useApi";
-import { fetchHobbies, fetchCategories } from "./utils/api";
+import { fetchHobbies, fetchCategories, addHobby } from "./utils/api";
+
+function AddHobbyModal({ categories, onClose, onAdded }) {
+  const [name, setName] = useState("");
+  const [cat, setCat] = useState(categories[0] || "Crafts");
+  const [customCat, setCustomCat] = useState("");
+  const [keywords, setKeywords] = useState("");
+  const [hashtags, setHashtags] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const handleSubmit = async () => {
+    if (!name.trim()) return;
+    setSaving(true);
+    try {
+      const finalCat = cat === "__custom__" ? customCat.trim() : cat;
+      await addHobby({
+        name: name.trim(),
+        category: finalCat,
+        keywords: keywords.split(",").map(k => k.trim()).filter(Boolean),
+        tiktok_hashtags: hashtags.split(",").map(h => h.trim().replace(/^#/, "")).filter(Boolean).map(h => "#" + h),
+      });
+      onAdded();
+    } catch (e) {
+      alert(e.message);
+    }
+    setSaving(false);
+  };
+
+  const inputStyle = { width: "100%", padding: "8px 10px", border: "1px solid #ddd", fontSize: 13, background: "#fff" };
+  const labelStyle = { fontSize: 10, fontWeight: 500, letterSpacing: "0.1em", color: "#999", textTransform: "uppercase", display: "block", marginBottom: 4 };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.18)", display: "flex", justifyContent: "center", alignItems: "flex-start", zIndex: 200, paddingTop: 80 }} onClick={onClose}>
+      <div onClick={e => e.stopPropagation()} style={{ background: "#faf9f7", width: 440, padding: "36px 40px", boxShadow: "0 4px 40px rgba(0,0,0,0.08)" }}>
+        <h3 style={{ margin: "0 0 24px", fontSize: 18, fontWeight: 700, letterSpacing: "-0.01em" }}>Add Hobby</h3>
+
+        <label style={labelStyle}>Name</label>
+        <input value={name} onChange={e => setName(e.target.value)} style={{ ...inputStyle, fontSize: 14, marginBottom: 16 }} placeholder="e.g. Pottery" />
+
+        <label style={labelStyle}>Category</label>
+        <select value={cat} onChange={e => setCat(e.target.value)} style={{ ...inputStyle, marginBottom: cat === "__custom__" ? 8 : 16 }}>
+          {categories.map(c => <option key={c} value={c}>{c}</option>)}
+          <option value="__custom__">+ New category...</option>
+        </select>
+        {cat === "__custom__" && (
+          <input value={customCat} onChange={e => setCustomCat(e.target.value)} placeholder="New category name" style={{ ...inputStyle, marginBottom: 16 }} />
+        )}
+
+        <label style={labelStyle}>Search Keywords (comma separated)</label>
+        <input value={keywords} onChange={e => setKeywords(e.target.value)} style={{ ...inputStyle, marginBottom: 16 }} placeholder="e.g. pottery, ceramics, wheel throwing" />
+
+        <label style={labelStyle}>TikTok Hashtags (comma separated)</label>
+        <input value={hashtags} onChange={e => setHashtags(e.target.value)} style={{ ...inputStyle, marginBottom: 24 }} placeholder="e.g. #pottery, #ceramics, #potterytok" />
+
+        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+          <button onClick={onClose} style={{ padding: "8px 16px", background: "transparent", border: "1px solid #ddd", fontSize: 11, cursor: "pointer", color: "#999", letterSpacing: "0.06em" }}>CANCEL</button>
+          <button onClick={handleSubmit} disabled={saving || !name.trim()} style={{ padding: "8px 20px", background: "#1a1a1a", color: "#fff", border: "none", fontSize: 11, cursor: "pointer", letterSpacing: "0.06em", opacity: saving || !name.trim() ? 0.5 : 1 }}>{saving ? "ADDING..." : "ADD HOBBY"}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function App() {
   const [category, setCategory] = useState("All");
@@ -12,6 +73,7 @@ export default function App() {
   const [videoPlatform, setVideoPlatform] = useState("all");
   const [selected, setSelected] = useState(null);
   const [sortBy, setSortBy] = useState("trendScore");
+  const [showAdd, setShowAdd] = useState(false);
 
   const { data: hobbies, loading, refetch } = useApi(() => fetchHobbies(category), [category]);
   const { data: categories, refetch: refetchCategories } = useApi(() => fetchCategories(), []);
@@ -48,7 +110,17 @@ export default function App() {
               Tracks trending hobbies across social media using a mix of Google Search, YouTube, and TikTok data
             </p>
           </div>
-          <div style={{ display: "flex", gap: 36, alignItems: "center" }}>
+          <div style={{ display: "flex", gap: 24, alignItems: "center" }}>
+            <button
+              onClick={() => setShowAdd(true)}
+              style={{
+                padding: "8px 16px", background: "transparent", border: "1px solid #ccc",
+                fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", cursor: "pointer",
+                color: "#666", textTransform: "uppercase",
+              }}
+            >
+              + Add Hobby
+            </button>
             {[
               { value: (hobbies || []).length, label: "TRACKED" },
               { value: risingCount, label: "RISING" },
@@ -67,7 +139,7 @@ export default function App() {
 
       {/* Filters + View Toggle */}
       <div style={{ padding: "16px 48px", display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #e8e6e3" }}>
-        <div style={{ display: "flex", gap: 4 }}>
+        <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
           {allCategories.map((cat) => (
             <button
               key={cat}
@@ -149,6 +221,14 @@ export default function App() {
           onClose={() => setSelected(null)}
           onRefresh={handleRefresh}
           categories={categories || []}
+        />
+      )}
+
+      {showAdd && (
+        <AddHobbyModal
+          categories={categories || []}
+          onClose={() => setShowAdd(false)}
+          onAdded={() => { setShowAdd(false); handleRefresh(); }}
         />
       )}
 

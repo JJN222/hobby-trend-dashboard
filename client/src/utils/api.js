@@ -85,3 +85,13 @@ export async function generateHobbyBrief(hobbyId) {
   if (!res.ok) throw new Error("Failed to generate brief");
   return res.json();
 }
+
+export async function addHobby({ name, category, keywords, tiktok_hashtags }) {
+  const res = await fetch(`${BASE}/hobbies`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, category, keywords, tiktok_hashtags }),
+  });
+  if (!res.ok) throw new Error("Failed to add hobby");
+  return res.json();
+}
