@@ -24,15 +24,15 @@ export default function HobbyTable({ hobbies, onSelect }) {
   const [sortCol, setSortCol] = useState("trendScore");
   const [sortDir, setSortDir] = useState("desc");
 
-  // Calculate search interest growth from sparkline (last 4 weeks vs prior 4 weeks)
+  // Calculate YoY search interest growth (this month vs same month last year)
   const calcSearchGrowth = (sparkline) => {
-    if (!sparkline || !Array.isArray(sparkline) || sparkline.length < 8) return null;
+    if (!sparkline || !Array.isArray(sparkline) || sparkline.length < 50) return null;
     const recent = sparkline.slice(-4);
-    const prior = sparkline.slice(-8, -4);
+    const yearAgo = sparkline.slice(0, 4);
     const avgRecent = recent.reduce((a, b) => a + b, 0) / recent.length;
-    const avgPrior = prior.reduce((a, b) => a + b, 0) / prior.length;
-    if (avgPrior === 0) return null;
-    return ((avgRecent - avgPrior) / avgPrior) * 100;
+    const avgYearAgo = yearAgo.reduce((a, b) => a + b, 0) / yearAgo.length;
+    if (avgYearAgo === 0) return null;
+    return ((avgRecent - avgYearAgo) / avgYearAgo) * 100;
   };
 
   const fmtViews = (v) => {
@@ -135,7 +135,7 @@ export default function HobbyTable({ hobbies, onSelect }) {
     { key: "ttViews", label: "TT Top Videos" },
     { key: "ttHashtag", label: "TT Hashtag" },
     { key: "volume", label: "Search Vol", tooltip: "Monthly Google searches -- comparable across hobbies" },
-    { key: "searchGrowth", label: "Search Growth", tooltip: "Google search interest change -- last 4 weeks vs prior 4 weeks" },
+    { key: "searchGrowth", label: "Search Growth", tooltip: "Google search interest change -- this month vs same month last year (YoY)" },
     { key: null, label: "Trend" },
   ];
 
