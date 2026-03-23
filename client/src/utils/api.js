@@ -13,6 +13,22 @@ export async function fetchCategories() {
   return res.json();
 }
 
+export async function deleteHobby(id) {
+  const res = await fetch(`${BASE}/hobbies/${id}`, { method: "DELETE" });
+  if (!res.ok) throw new Error("Failed to delete hobby");
+  return res.json();
+}
+
+export async function updateHobby(id, updates) {
+  const res = await fetch(`${BASE}/hobbies/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(updates),
+  });
+  if (!res.ok) throw new Error("Failed to update hobby");
+  return res.json();
+}
+
 export async function fetchVideos({ hobby_id, platform, category, limit = 40 }) {
   const params = new URLSearchParams();
   if (hobby_id) params.set("hobby_id", hobby_id);
@@ -37,32 +53,17 @@ export async function fetchSnapshots(hobbyId, days = 56) {
   return res.json();
 }
 
-export async function fetchOverviewBrief() {
-  const res = await fetch(`${BASE}/briefs/overview`);
-  if (!res.ok) throw new Error("Failed to fetch overview");
+export async function fetchBriefs({ category, month } = {}) {
+  const params = new URLSearchParams();
+  if (category && category !== "All") params.set("category", category);
+  if (month) params.set("month", month);
+  const res = await fetch(`${BASE}/briefs?${params}`);
+  if (!res.ok) throw new Error("Failed to fetch briefs");
   return res.json();
 }
 
-export async function refreshOverviewBrief() {
-  const res = await fetch(`${BASE}/briefs/refresh`, { method: "POST" });
-  if (!res.ok) throw new Error("Failed to refresh overview");
-  return res.json();
-}
-
-export async function fetchHobbyBrief(hobbyId) {
-  const res = await fetch(`${BASE}/briefs/hobby/${hobbyId}`);
+export async function fetchBrief(hobbyId) {
+  const res = await fetch(`${BASE}/briefs/${hobbyId}`);
   if (!res.ok) return null;
-  return res.json();
-}
-
-export async function generateHobbyBrief(hobbyId) {
-  const res = await fetch(`${BASE}/briefs/hobby/${hobbyId}/generate`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-  });
-  if (!res.ok) {
-    const err = await res.json();
-    throw new Error(err.error || "Generation failed");
-  }
   return res.json();
 }
