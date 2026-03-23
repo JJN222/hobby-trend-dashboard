@@ -2,7 +2,6 @@
  * Collect monthly search volume for each hobby's primary keyword.
  * Uses DataForSEO Google Ads Search Volume endpoint.
  * This gives REAL comparable monthly search numbers across hobbies.
-const HOBBY_ID = process.argv.find(a => a.startsWith("--hobby-id="))?.split("=")[1];
  *
  * Run: node scripts/collect-volume.js
  * Cost: ~$0.05 per hobby (batched), ~$3 per full run
@@ -10,6 +9,7 @@ const HOBBY_ID = process.argv.find(a => a.startsWith("--hobby-id="))?.split("=")
 
 const pool = require("../db/pool");
 require("dotenv").config();
+const HOBBY_ID = process.argv.find(a => a.startsWith("--hobby-id="))?.split("=")[1];
 
 const LOGIN = process.env.DATAFORSEO_LOGIN;
 const PASSWORD = process.env.DATAFORSEO_PASSWORD;
