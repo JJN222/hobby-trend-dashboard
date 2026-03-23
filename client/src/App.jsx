@@ -179,17 +179,6 @@ export default function App() {
             ))}
           </div>
 
-          {view === "table" && (
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontSize: 10, color: "#bbb", letterSpacing: "0.1em", fontWeight: 500, textTransform: "uppercase" }}>Sort</span>
-              <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}
-                style={{ fontSize: 12, padding: "5px 10px", border: "1px solid #e0e0e0", background: "transparent", color: "#444", fontWeight: 400, cursor: "pointer" }}>
-                <option value="trendScore">Trend Score</option>
-                <option value="growthRate">Growth Rate</option>
-                <option value="name">Name</option>
-              </select>
-            </div>
-          )}
 
           {view === "videos" && (
             <div style={{ display: "flex", gap: 2, background: "#eee", padding: 2 }}>
