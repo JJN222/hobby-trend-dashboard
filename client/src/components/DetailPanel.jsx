@@ -184,6 +184,22 @@ export default function DetailPanel({ hobby, onClose, onRefresh, categories }) {
           </div>
         )}
 
+        {/* Keywords and Hashtags */}
+        <div style={{ marginBottom: 28, paddingBottom: 28, borderBottom: "1px solid #e8e6e3" }}>
+          {hobby.keywords && hobby.keywords.length > 0 && (
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 10, fontWeight: 500, letterSpacing: "0.12em", color: "#999", textTransform: "uppercase", marginBottom: 6 }}>Search Keywords</div>
+              <div style={{ fontSize: 13, color: "#444", fontWeight: 400 }}>{hobby.keywords.join(", ")}</div>
+            </div>
+          )}
+          {hobby.tiktok_hashtags && hobby.tiktok_hashtags.length > 0 && (
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 500, letterSpacing: "0.12em", color: "#999", textTransform: "uppercase", marginBottom: 6 }}>TikTok Hashtags</div>
+              <div style={{ fontSize: 13, color: "#444", fontWeight: 400 }}>{hobby.tiktok_hashtags.join(", ")}</div>
+            </div>
+          )}
+        </div>
+
         {/* Platform Metrics 3-col */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 20, marginBottom: 28, paddingBottom: 28, borderBottom: "1px solid #e8e6e3" }}>
           <MetricColumn label="YouTube" rows={[
@@ -200,7 +216,7 @@ export default function DetailPanel({ hobby, onClose, onRefresh, categories }) {
           ]} />
           <MetricColumn label="Google Trends" rows={[
             ["Interest", hobby.trends_interest_score ?? "N/A"],
-            ["Acceleration", hobby.search_acceleration != null ? `${fmt(Number(hobby.search_acceleration).toFixed(1))}%` : "N/A"],
+            ["YoY Growth", hobby.search_acceleration != null ? `${fmt(Number(hobby.search_acceleration).toFixed(1))}%` : "N/A"],
           ]} />
         </div>
 
