@@ -220,7 +220,7 @@ export default function DetailPanel({ hobby, onClose, onRefresh, categories }) {
         )}
 
         {/* Video Links */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, marginBottom: 28, paddingBottom: 28, borderBottom: "1px solid #e8e6e3" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 24, marginBottom: 28, paddingBottom: 28, borderBottom: "1px solid #e8e6e3" }}>
           <div>
             <div style={{ fontSize: 10, fontWeight: 500, letterSpacing: "0.12em", color: "#999", textTransform: "uppercase", marginBottom: 8 }}>
               Top YouTube
