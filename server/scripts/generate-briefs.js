@@ -14,6 +14,16 @@ require("dotenv").config();
 const API_KEY = process.env.ANTHROPIC_API_KEY;
 const MODEL = "claude-sonnet-4-6";
 
+function calcYoY(sparkline) {
+  if (!sparkline || !Array.isArray(sparkline) || sparkline.length < 50) return "N/A";
+  const recent = sparkline.slice(-4);
+  const yearAgo = sparkline.slice(0, 4);
+  const avgR = recent.reduce((a, b) => a + b, 0) / recent.length;
+  const avgY = yearAgo.reduce((a, b) => a + b, 0) / yearAgo.length;
+  if (avgY === 0) return "N/A";
+  return ((avgR - avgY) / avgY * 100).toFixed(1);
+}
+
 const SYSTEM_PROMPT = `You are a senior content strategist who analyzes hobby trend data across YouTube, TikTok, and Google Trends to produce a monthly intelligence report for a talent management agency.
 
 Your report helps the team decide which hobby niches to invest in for content creation. Be specific, data-driven, and opinionated. Don't hedge -- make clear recommendations.
@@ -71,7 +81,7 @@ async function getAllTrendData() {
       s.trend_score, s.direction,
       s.yt_avg_views, s.yt_growth_rate, s.yt_new_videos_24h, s.yt_unique_channels,
       s.tt_hashtag_views, s.tt_growth_rate, s.tt_avg_engagement_rate, s.tt_unique_creators,
-      s.trends_interest_score, s.search_acceleration, s.creator_adoption_rate
+      s.trends_interest_score, s.search_acceleration, s.creator_adoption_rate, s.trends_sparkline
     FROM hobbies h
     LEFT JOIN LATERAL (
       SELECT * FROM hobby_snapshots
@@ -90,7 +100,7 @@ function buildPrompt(hobbies) {
     `${i + 1}. ${h.name} (${h.category}) | Score: ${h.trend_score || "N/A"}/100 | ${h.direction || "unknown"}
    YT: ${h.yt_avg_views ? Number(h.yt_avg_views).toLocaleString() + " avg views" : "no data"}, ${h.yt_growth_rate || 0}% growth, ${h.yt_unique_channels || 0} channels, ${h.yt_new_videos_24h || 0} new/day
    TT: ${h.tt_hashtag_views ? Number(h.tt_hashtag_views).toLocaleString() + " hashtag views" : "no data"}, ${h.tt_avg_engagement_rate || 0}% eng, ${h.tt_unique_creators || 0} creators
-   Trends: ${h.trends_interest_score || 0}/100 interest, ${h.search_acceleration || 0}% acceleration`
+   Trends: ${h.trends_interest_score || 0}/100 interest, YoY growth: ${calcYoY(h.trends_sparkline)}%`
   ).join("\n\n");
 
   return `Analyze trend data for ${hobbies.length} hobbies and produce the Monthly Trend Intelligence Report.
@@ -101,7 +111,7 @@ ${lines}
 
 <context>
 Report date: ${new Date().toISOString().split("T")[0]}
-Data sources: YouTube Data API (30-day top videos), TikAPI (TikTok hashtags), DataForSEO (Google Trends 3-month)
+Data sources: YouTube Data API (30-day top videos), TikAPI (TikTok hashtags), DataForSEO (Google Trends 12-month sparkline, YoY comparison). IMPORTANT: Channel and creator counts are from a SAMPLE of top tracked videos, NOT the total market. Never describe a hobby as "underserved" based on these sample counts.
 Note: Growth rates may show 0% if this is the first day of data collection. Focus on absolute metrics and cross-platform signals in that case.
 </context>`;
 }
